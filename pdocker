@@ -1,0 +1,10 @@
+#!/bin/bash
+
+# home directory of this project
+PD_HOME=$0
+PD_HOME=${PD_HOME/\/pdocker/}
+
+# import and start engine
+. "$POCKET_ENGINE_HOME/engine/engine.sh"
+engineCreateContext "$PD_HOME"
+engineStart         "$PD_HOME" "$@"
