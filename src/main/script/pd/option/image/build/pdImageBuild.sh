@@ -37,6 +37,7 @@ function pdImageBuild {
 
   local imageBuildQueue=()
 
+  local image=
   for image in ${imagesToBuild[@]}
   do
     imageBuildQueue=(${imageBuildQueue[@]} $(pdImageList -a -I --image $image))
@@ -46,6 +47,7 @@ function pdImageBuild {
 
   echo ""
   echo "Image build queue:"
+  local image=
   for image in ${imageBuildQueue[@]}
   do
     echo -e " - ${C_WHITE}$image${C_RESET}"

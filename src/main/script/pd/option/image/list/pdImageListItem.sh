@@ -1,72 +1,71 @@
 function pdImageListItem {
-  local imagesDir=$1
-  shift
-  local dir=$1
-  shift
-  local printVersion=$1
-  shift
-  local printFormatted=$1
-  shift
-  local printPath=$1
-  shift
-  local printInheritance=$1
-  shift
-  local printInheritanceinverted=$1
-  shift
-  local selectedImages=($@)
+  local imagesDir="$1"                ; shift
+  local image="$1"                    ; shift
+  local printFormatted="$1"           ; shift
+  local printPackage="$1"             ; shift
+  local printImageName="$1"           ; shift
+  local printVersion="$1"             ; shift
+  local printPath="$1"                ; shift
+  local printInheritance="$1"         ; shift
+  local printInheritanceInverted="$1" ; shift
+  local previousPackage="$1"          ; shift
+  local allImages=("$@")
 
-  local path="$imagesDir/$dir"
-  local dockerfile="$imagesDir/$dir/Dockerfile"
-  local version="$imagesDir/$dir/version"
+  # split image line for specific data
+  local imagePackage=
+  local imageName=
+  local imageVersion=
+  local imagePath=
+  imagePackage="${image/":"*/}"
+  imageName="${image/"$imagePackage:"/}"
+  imageName="${imageName/":"*/}"
+  imageVersion="${image/*":"/}"
+  imagePath="$imagesDir/$imagePackage"
 
-  # if there is image name selection, check if is on the list
-  local isSelected=true
-  if [[ ! ${#selectedImages[@]} -eq 0 ]]; then
-    isSelected=false
-    for selected in ${selectedImages[@]}; do [[ "$selected" = "$dir" ]] && isSelected=true ; done
-  fi
+  # formatted printing
+  if [[ $printFormatted = true ]] ; then
 
-  # it is image if there is dockerfile
-  if [[ -f "$dockerfile" ]] && [[ $isSelected = true ]]; then
+    # print package name as directory tree
+    local depth=0
+    local previousPackage=(${previousPackage//"/"/ }) # there is no missing "" in this line
+    local currentPackage=(${imagePackage//"/"/ }) # there is no missing "" in this line
+    local previousPath=
+    local currentPath=
+    while [[ $depth -lt ${#currentPackage[@]} ]] ; do
+      local previousPackageItem="${previousPackage[$depth]}"
+      local currentPackageItem="${currentPackage[$depth]}"
 
-    # prepare version number
-    local versionNumber=
-    if [[ $printVersion = true ]]; then
-      # read version from first line of /version file
-      [[ -f "$version" ]] && versionNumber="$(head -n 1 $version)"
-      # format version info
-      [[ $printFormatted = true  ]] && [[ -f "$version" ]] && versionNumber="${C_CYAN}:${C_BLUE}$versionNumber${C_RESET}"
-      [[ $printFormatted = false ]] && [[ -f "$version" ]] && versionNumber=":$versionNumber"
-    fi
+      [[ -n "$previousPackageItem" ]] && previousPath+="$previousPackageItem/"
+      [[ -n "$currentPackageItem" ]] && currentPath+="$currentPackageItem/"
 
-    # prepare start and end format of line
-    local beginFormat=
-    [[ $printFormatted = true ]] && beginFormat=" - ${C_WHITE}"
-    local endingFormat=
-    [[ $printFormatted = true ]] && endingFormat="${C_RESET}"
+      [[ "$previousPath" != "$currentPath" ]] && printf "%$((depth * 3 + 1))s %s" "-" "$currentPackageItem" \
+       && [[ $((depth + 1)) -lt ${#currentPackage[@]} ]] && echo
 
-    # prepare path information
-    local pathToPrint=
-    [[ $printPath = true ]] && pathToPrint="{$path}"
-
-    [[ $printInheritance = true ]] && [[ $printInheritanceinverted = true ]] && pdImageListItemInheritance $printVersion $printFormatted $printPath $printInheritanceinverted "$dir" "$(pdImageList -a -p)"
-
-    # print
-    echo -e "$beginFormat$dir$versionNumber$endingFormat$pathToPrint"
-
-    # print inheritance
-    [[ $printInheritance = true ]] && [[ ! $printInheritanceinverted = true ]] && pdImageListItemInheritance $printVersion $printFormatted $printPath $printInheritanceinverted "$dir" "$(pdImageList -a -p)"
-
-  else # if there is no dockerfile it is subdirectory
-
-    items=$(ls $path)
-    for item in ${items[@]}
-    do
-      if [[ -d "$path/$item" ]]; then
-        pdImageListItem "$path" "$item" $printVersion $printFormatted $printPath $printInheritance $printInheritanceinverted ${selectedImages[@]}
-      fi
+      depth=$((depth + 1))
     done
 
+    # print info with colors
+    local lineToPrint=""
+
+    [[ $printImageName = true ]] && lineToPrint+="${C_YELLOW}:${C_WHITE}$imageName${C_RESET}"
+    [[ $printVersion   = true ]] && lineToPrint+="${C_YELLOW}${lineToPrint:+":"}${C_BLUE}$imageVersion${C_RESET}"
+    [[ $printPath      = true ]] && lineToPrint+="${C_YELLOW}${lineToPrint:+":"}${C_CYAN}{path:$imagePath}${C_RESET}"
+
+    echo -e "$lineToPrint"
+    [[ $printInheritance         = true ]] && pdImageListItemInheritance "$imagesDir" "$image" $printFormatted $printPackage $printImageName $printVersion $printPath false $depth "${allImages[@]}"
+
+  # simple printing
+  else
+    local lineToPrint=""
+
+    [[ $printPackage   = true ]] && lineToPrint+="$imagePackage"
+    [[ $printImageName = true ]] && lineToPrint+="${lineToPrint:+":"}$imageName"
+    [[ $printVersion   = true ]] && lineToPrint+="${lineToPrint:+":"}$imageVersion"
+    [[ $printPath      = true ]] && lineToPrint+="${lineToPrint:+":"}{path:$imagePath}"
+
+    [[ $printInheritanceInverted = true ]] && pdImageListItemInheritance "$imagesDir" "$image" $printFormatted $printPackage $printImageName $printVersion $printPath $printInheritanceInverted "" "${allImages[@]}"
+    echo "$lineToPrint"
+    [[ $printInheritance         = true ]] && pdImageListItemInheritance "$imagesDir" "$image" $printFormatted $printPackage $printImageName $printVersion $printPath $printInheritanceInverted "" "${allImages[@]}"
   fi
 
 }

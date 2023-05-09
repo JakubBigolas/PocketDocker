@@ -1,10 +1,12 @@
 #!/bin/bash
 
-# home directory of this project
-PD_HOME=$0
-PD_HOME=${PD_HOME/\/pdocker/}
+# project path
+POCKET_DOCKER_HOME="/drives/c/Users/jakub.bigolas/OneDrive/PocketDocker"
+
+# import config file
+. "$POCKET_DOCKER_HOME/config/config.sh"
 
 # import and start engine
-. "$POCKET_ENGINE_HOME/engine/engine.sh"
-engineCreateContext "$PD_HOME"
-engineStart         "$PD_HOME" "$@"
+. "$POCKET_DOCKER_HOME/engine/engine-embed.sh"
+engineCreateContext "$POCKET_DOCKER_HOME"
+engineStart         "$POCKET_DOCKER_HOME" "$@"

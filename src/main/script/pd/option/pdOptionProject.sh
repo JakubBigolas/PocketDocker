@@ -31,16 +31,20 @@ function pdProjectStatus {
 
   local projects=()
 
+  local file=
   for file in `ls $composeDir` ; do [[ -d "$composeDir/$file" ]] && projects=(${projects[@]} $file) ; done
+  local file=
   for file in `ls $imagesDir` ;  do [[ -d "$imagesDir/$file"  ]] && projects=(${projects[@]} $file) ; done
 
   projects=(`stdArraysUnique ${projects[@]}`)
 
+  local project=
   for project in ${projects[@]}
   do
     echo -e ""
     echo -e "Project: $project"
     echo -e "   Images:"
+    local image=
     for image in `pdImageList $project`
     do
       echo -e "    - ${C_WHITE}$image${C_RESET}"

@@ -1,82 +1,97 @@
 function pdImageListItemInheritance {
-  local printVersion=$1
-  shift
-  local printFormatted=$1
-  shift
-  local printPath=$1
-  shift
-  local printInheritanceinverted=$1
-  shift
-  local image=$1
-  shift
-  local allImages=($@)
+  local imagesDir="$1"                ; shift
+  local image="$1"                    ; shift
+  local printFormatted="$1"           ; shift
+  local printPackage="$1"             ; shift
+  local printImageName="$1"           ; shift
+  local printVersion="$1"             ; shift
+  local printPath="$1"                ; shift
+  local printInheritanceInverted="$1" ; shift
+  local depth="$1"                    ; shift
+  local allImages=("$@")
 
-  # prepare start and end format of line
-  local beginFormat=
-  [[ $printFormatted = true ]] && beginFormat="   - ${C_WHITE}"
-  local endingFormat=
-  [[ $printFormatted = true ]] && endingFormat="${C_RESET}"
+  # split image line for specific data
+  local imagePackage="$image"
+  local imageName="$image"
+  local imageVersion="$image"
+  local imagePath=
+  imagePackage="${imagePackage/":"*/}"
+  imageName="${imageName/"$imagePackage:"/}"
+  imageName="${imageName/":"*/}"
+  imageVersion="${imageVersion/*":"/}"
+  imagePath="$imagesDir/$imagePackage"
 
-  # loop per all available image in project to find config of current image
-  for imageToFind in ${allImages[@]}
-  do
-    local imageName=${imageToFind/\{*/}
-    local path=${imageToFind/*\{/}
-    local path=${path/\}/}
+  # find FROM clause in Dockerfile
+  local fromWithVersion
+  fromWithVersion=$(cat "$imagesDir/$imagePackage/Dockerfile" | grep -e "^FROM ")
+  fromWithVersion=${fromWithVersion/FROM /}
 
-    # image found by name
-    if [[ "$image" = "$imageName" ]]; then
+  if [[ -n "$fromWithVersion" ]] ; then
 
-      # find FROM clause in docker file
-      local fromWithVersion=$(cat "$path/Dockerfile" | grep -e "^FROM ")
-      fromWithVersion=${fromWithVersion/FROM /}
+    # retrieve inherited image name and version
+    local fromImage=${fromWithVersion/:*/}
+    local fromVersion="${fromWithVersion/"$fromImage"/}"
+    fromVersion="${fromVersion/":"/}"
 
-      # parent image name without version from FROM clause
-      local from=${fromWithVersion/:*/}
+    # last found image data
+    local itemPackage=
+    local itemName=
+    local itemVersion=
+    local itemPath=
+    local foundItem=
 
-      # loop per all available image in project to find config of parent image
-      for anyImage in ${allImages[@]}
-      do
+    # loop looking for matching image in index
+    local item=
+    for item in "${allImages[@]}" ; do
 
-        # parent image name
-        local parentImageName=${anyImage/\{*/}
+      itemPackage="${item/":"*/}"
+      itemName="${item/"$itemPackage:"/}"
+      itemName="${itemName/":"*/}"
+      itemVersion="${item/*":"/}"
+      itemPath="$imagesDir/$itemPackage"
 
-        # if there is config for parent image
-        if [[ "$parentImageName" = "$from" ]]; then
+      # check version only if inherited image has specified
+      if [[ -z "$fromVersion" ]] || [[ "$fromVersion" = "$itemVersion" ]] ; then
+        # compare by image name
+        [[ "$fromImage" = "$itemName" ]] && foundItem="$item" && break
+      fi
 
-          # parent path
-          local parentPath=
-          [[ $printPath = true ]] && parentPath=${anyImage/*\{/} && parentPath="{$parentPath"
+    done
 
-          # parent info formatted
-          local fromFormatted=$from
-          [[ $printFormatted = true ]] && fromFormatted="$from${C_RESET}"
 
-          # version number of parent from FROM clause
-          local versionNumber=
-          if [[ $printVersion = true ]]; then
-            versionNumber=${fromWithVersion/$from/}
-            versionNumber=${versionNumber/:/}
-            [[ $printFormatted = true  ]] && [[ ! -z $versionNumber ]] && versionNumber="${C_CYAN}:${C_BLUE}$versionNumber${C_RESET}"
-            [[ $printFormatted = false ]] && [[ ! -z $versionNumber ]] && versionNumber=":$versionNumber"
-          fi
 
-          # if inheritance is printed inverted way then perform recurrence before printing this iteration info
-          [[ $printInheritanceinverted = true ]] && pdImageListItemInheritance $from "${allImages[@]}"
+    # print info if image has been found
+    if [[ -n "$foundItem" ]] ; then
+      if [[ $printFormatted = true ]] ; then
+        printf "%$((depth * 3))s" ""
+        local lineToPrint=""
 
-          # print this iteration info
-          echo -e "$beginFormat$fromFormatted$versionNumber$parentPath$endingFormat"
+        [[ $printImageName = true ]] && lineToPrint+="${C_YELLOW}FROM${C_RESET} $itemPackage${C_YELLOW}:${C_WHITE}$imageName${C_RESET}"
+        [[ $printVersion   = true ]] && lineToPrint+="${C_YELLOW}${lineToPrint:+":"}${C_BLUE}$imageVersion${C_RESET}"
+        [[ $printPath      = true ]] && lineToPrint+="${C_YELLOW}${lineToPrint:+":"}${C_CYAN}{path:$imagePath}${C_RESET}"
 
-          # if inheritance is printed normal way then perform recurrence after printing this iteration info
-          [[ ! $printInheritanceinverted = true ]] && pdImageListItemInheritance $from "${allImages[@]}"
+        echo -e "$lineToPrint"
+        pdImageListItemInheritance "$imagesDir" "$foundItem" $printFormatted $printPackage $printImageName $printVersion $printPath $printInheritanceInverted $((depth + 1)) "${allImages[@]}"
+      else
+        local lineToPrint=""
 
-          break # there is no reason to continue sub loop
-        fi
-      done
+        [[ $printPackage   = true ]] && lineToPrint+="$itemPackage"
+        [[ $printImageName = true ]] && lineToPrint+="${lineToPrint:+":"}$itemName"
+        [[ $printVersion   = true ]] && lineToPrint+="${lineToPrint:+":"}$itemVersion"
+        [[ $printPath      = true ]] && lineToPrint+="${lineToPrint:+":"}{path:$itemPath}"
 
-      break; # there is no reason to continue main loop
+        [[ $printInheritanceInverted = true  ]] && pdImageListItemInheritance "$imagesDir" "$foundItem" $printFormatted $printPackage $printImageName $printVersion $printPath $printInheritanceInverted "" "${allImages[@]}"
+        echo "$lineToPrint"
+        [[ $printInheritanceInverted = false ]] && pdImageListItemInheritance "$imagesDir" "$foundItem" $printFormatted $printPackage $printImageName $printVersion $printPath $printInheritanceInverted "" "${allImages[@]}"
+
+      fi
+
+    # or if there is no matching image in index print inheritance only for formatted version
+    elif [[ $printFormatted = true ]] ; then
+      printf "%$((depth * 3))s" ""
+      echo "FROM :$fromWithVersion"
     fi
 
-  done
+  fi
 
 }

@@ -1,26 +1,32 @@
 function pdOptionImage {
 
   # Default option is "Help"
-  local option=Help
 
   while [[ $# -gt 0 ]]; do
     case $1 in
-      --help|"-?")
-        option=Help
+      --help|"-?"|help)
         shift
-        ;;
-      build|list)
-        option=$(pdToolUpperCaseFirstLetter "$1")
-        shift
+        pdImageHelp
         break;
         ;;
+
+      build)
+        shift
+        pdImageBuild "$@"
+        break;
+        ;;
+
+      list)
+        shift
+        pdImageList "$@"
+        break;
+        ;;
+
       *)
         echo "Unknown option $1"
         exit 1
         ;;
     esac
   done
-
-  eval pdImage$option "$@"
 
 }
