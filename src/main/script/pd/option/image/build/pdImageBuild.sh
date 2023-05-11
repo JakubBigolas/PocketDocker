@@ -1,60 +1,64 @@
 function pdImageBuild {
 
-  local imagesToBuild=()
+  local selection=()
   local paramSilent=false
 
   while [[ $# -gt 0 ]]; do
     case $1 in
-      --help|"-?")
+
+      --help|"-?"|help)
         shift
-        [[ ! -z "$@" ]] && echo -e "${C_RED}Unhandled arguments: $@" && exit 1
+        [[ ! -z "$*" ]] && echo -e "${C_RED}Unhandled arguments: $*" && exit 1
         echo -e ""
         echo -e "Usage: list [parameters] [project list]"
         echo -e ""
         echo -e "Run docker image build process for selected images."
-        echo -e "If any project name were not selected then global project name will be used."
-        echo -e "If there is no global project name set then all available projects will be used."
         echo -e ""
         echo -e "Arguments:"
-        pdToolHelpOptionPrint '-s'       'print build log to logfile instead of stdout'
-        pdToolHelpOptionPrint '-?'       'print this help info'
-        pdToolHelpOptionPrint '--help'   'print this help info'
+        pdToolHelpOptionPrint '-s'              'prevent of printing log file to standard output'
+        pdToolHelpOptionPrint '--image *'       'build image specified by name'
+        pdToolHelpOptionPrint '--package *|*'   'build all images for package (and sub packages)'
+        pdToolHelpOptionPrint '--help|help|-?'  'print this help info'
         echo -e ""
         exit 0
         ;;
+
       -s)
         paramSilent=true
         shift
         ;;
-      *)
-        imagesToBuild=(${imagesToBuild[@]} $1)
-        shift
-        ;;
+
+      # pick image by name
+      --image|--package) selection+=("$1" "$2") ; shift ; shift ;;
+
+      # pick all images from package
+      *)                 selection+=("$1")      ; shift         ;;
+
     esac
   done
 
-  [[ -z "$imagesToBuild" ]] && imagesToBuild=($(pdImageList))
+  # read image names using image list query
+  local buildQueue=()
+  readarray -t buildQueue < <(   pdImageList -v -I "${selection[@]}"   )
 
-  local imageBuildQueue=()
-
-  local image=
-  for image in ${imagesToBuild[@]}
-  do
-    imageBuildQueue=(${imageBuildQueue[@]} $(pdImageList -a -I --image $image))
+  # make queue distinct
+  local list=("${buildQueue[@]}")
+  local buildQueue=()
+  local fromAll=
+  for fromAll in "${list[@]}" ; do
+    local exists=false
+    local fromSet=
+    for fromSet in "${buildQueue[@]}" ; do
+      [[ "$fromSet" = "$fromAll" ]] && exists=true && break
+    done
+    [[ $exists = false ]] && buildQueue+=("$fromAll")
   done
 
-  imageBuildQueue=($(stdArraysUnique ${imageBuildQueue[@]}))
-
+  # print queue before build
   echo ""
   echo "Image build queue:"
   local image=
-  for image in ${imageBuildQueue[@]}
-  do
-    echo -e " - ${C_WHITE}$image${C_RESET}"
-  done
-  for image in ${imageBuildQueue[@]}
-  do
-    pdImageBuildItem $image $paramSilent
-  done
+  for image in "${buildQueue[@]}" ; do    echo -e " - ${C_WHITE}$image${C_RESET}"    ; done
+  for image in "${buildQueue[@]}" ; do    pdImageBuildItem $image $paramSilent       ; done
 
 }

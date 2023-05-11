@@ -61,7 +61,8 @@ function pdImageListItem {
     [[ $printPackage   = true ]] && lineToPrint+="$imagePackage"
     [[ $printImageName = true ]] && lineToPrint+="${lineToPrint:+":"}$imageName"
     [[ $printVersion   = true ]] && lineToPrint+="${lineToPrint:+":"}$imageVersion"
-    [[ $printPath      = true ]] && lineToPrint+="${lineToPrint:+":"}{path:$imagePath}"
+    [[ -n "$lineToPrint" ]] && [[ $printPath = true ]] && lineToPrint+="${lineToPrint:+":"}{path:$imagePath}"
+    [[ -z "$lineToPrint" ]] && [[ $printPath = true ]] && lineToPrint+="$imagePath"
 
     [[ $printInheritanceInverted = true ]] && pdImageListItemInheritance "$imagesDir" "$image" $printFormatted $printPackage $printImageName $printVersion $printPath $printInheritanceInverted "" "${allImages[@]}"
     echo "$lineToPrint"

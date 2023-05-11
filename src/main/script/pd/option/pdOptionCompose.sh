@@ -1,24 +1,28 @@
 function pdOptionCompose {
 
-  local option=
+  # Default option is "Help"
 
   while [[ $# -gt 0 ]]; do
     case $1 in
-      list)
-        option=$(pdToolUpperCaseFirstLetter "$1")
+
+      --help|"-?"|help)
         shift
+        pdComposeHelp
         break;
         ;;
-      *)
-        echo "Unknown option $1"
-        exit 1
+
+      list)
+        shift
+        pdComposeList "$@"
+        break;
         ;;
+
+      *)
+        pdCompose "$@"
+        exit 0
+        ;;
+
     esac
   done
-
-  # Default option is "List"
-  [[ -z "$option" ]] && option=List
-
-  eval pdImage$option "$@"
 
 }

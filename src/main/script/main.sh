@@ -37,4 +37,5 @@ function main {
 
   [[ $showTotalTime = true ]] && echo "total time $(pdToolEndScript "$startScript")"
 
+  return 0
 }

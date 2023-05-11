@@ -1,37 +1,41 @@
 function pdImageBuildItem {
-  local imageName=$1
-  local paramSilent=$2
+  local image=$1    ; shift
+  local paramSilent=$1  ; shift
   local startScript=$(pdToolStartScript)
-
-  # get image version
-  imageToBuild=$(pdImageList -a -p -v --image $imageName)
-
-  imagePath=${imageToBuild/*\{/}
-  imagePath=${imagePath/\}/}
-
-  imageVersion=${imageToBuild/"{$imagePath}"/}
-  imageVersion=${imageVersion/$imageName/}
-  imageVersion=${imageVersion/:/}
-  [[ -z "$imageVersion" ]] && echo "" && echo "WARNING: version not set, default value is 1.0" && imageVersion="1.0"
-
-  local dockerImageName="$imageName:$imageVersion"
-  local dockerLatestImageName="$imageName:latest"
-
-  local logPath="$imagePath/$imageVersion.log"
-  local logLatestPath="$imagePath/latest.log"
 
   echo -e ""
   echo -e "@ Start build proces "
   echo -e ""
-  echo -e "@ Image           ${C_WHITE}$imageName${C_RESET}"
-  echo -e "@ Version         ${C_BLUE}$imageVersion${C_RESET}"
-  echo -e "@ Src             ${C_WHITE}$imagePath${C_RESET}"
-  echo -e "@ Log path        ${C_WHITE}$logPath${C_RESET}"
-  echo -e "@ Latest log path ${C_WHITE}$logLatestPath${C_RESET}"
+
+  # split image to name and version
+  local imageName="${image/":"*/}"
+  local imageVersion=${image/"$imageName"/}
+        imageVersion=${imageVersion/":"/}
+
+  # read image path from image list query
+  local imagePath="$(pdImageList -p -N --image "$imageName")"
+        imagePath=${imagePath/"{path:"/}
+        imagePath=${imagePath/"}"/}
+  [[ -z "$imageVersion" ]] && echo "WARNING: version not set, default value is 1.0" && imageVersion="1.0"
+
+  # prepare docker naming
+  local dockerImageName="$imageName:$imageVersion"
+  local dockerLatestImageName="$imageName:latest"
+
+  # prepare log paths
+  local logPath="$imagePath/$imageVersion.log"
+  local logLatestPath="$imagePath/latest.log"
+
+  # print parametri
+  printf "@ Image           ${C_WHITE}%s${C_RESET}\n" "$imageName"     ;
+  printf "@ Version         ${C_BLUE}%s${C_RESET}\n"  "$imageVersion"  ;
+  printf "@ Src             ${C_WHITE}%s${C_RESET}\n" "$imagePath"     ;
+  printf "@ Log path        ${C_WHITE}%s${C_RESET}\n" "$logPath"       ;
+  printf "@ Latest log path ${C_WHITE}%s${C_RESET}\n" "$logLatestPath" ;
   echo -e ""
 
   if [[ $paramSilent = true ]]; then
-    docker build $imagePath/. -t   $dockerImageName     &>	"$logPath" || exit 1
+    docker build $imagePath/. -t $dockerImageName       &>	"$logPath" || exit 1
     docker tag $dockerImageName $dockerLatestImageName  &>>	"$logPath" || exit 1
 
     local buildTime=$(pdToolEndScript "$startScript")

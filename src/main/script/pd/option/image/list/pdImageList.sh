@@ -72,15 +72,13 @@ function pdImageList {
         ;;
 
       # pick image by name
-      --image)
-        selectedImages+=("$2")
-        shift ; shift ;;
+      --image)    selectedImages+=("$2")   ; shift ; shift ;;
 
       # pick all images from package
-      --package|*)
-        [[ "$1" = "--package" ]] && shift
-        selectedPackages+=("$1")
-        shift ;;
+      --package)  selectedPackages+=("$2") ; shift ; shift ;;
+
+      # pick all images from package
+      *)          selectedPackages+=("$1") ; shift ;;
 
     esac
   done
@@ -104,7 +102,7 @@ function pdImageList {
       local selected=false
 
       # packages filter
-      loca selectedPackage=
+      local selectedPackage=
       for selectedPackage in "${selectedPackages[@]}" ; do
         [[ "$imagePackage/" =~ ^$selectedPackage//* ]] && selected=true && continue
       done
