@@ -1,63 +1,30 @@
 function pdCompose() {
 
+  local selectedProjects=() # user selected docker compose projects
+  local selectedPackages=() # user selected docker compose packages / sub-packages
 
-  local allComposes=()
-  readarray -t allComposes < <(   pdComposeList -p -x   )
-
-
-  local selectedProjects=()
-  local selectedPackages=()
+  # unhandled arguments to be redirected to "docker compose"
   local unhandledArgs=()
 
+  # command args loop
   while [[ $# -gt 0 ]]; do
     case $1 in
 
-      # print help info
-      --help|"-?"|help) shift ; eval pdComposeHelp "$@" ; exit 0 ;;
-
+      # command project selection
       --project) selectedProjects+=("$2") ; shift ; shift ;;
 
+      # command package selection
       --package) selectedPackages+=("$2") ; shift ; shift ;;
 
+      # not handle, redirect to "docker compose"
       *)         unhandledArgs+=("$1")    ; shift ;;
 
     esac
   done
 
-
-
+  # filter docker compose projects using compose list function
   local filteredComposes=()
-
-  # get all composes if there are no filter
-  if [[ ${#selectedPackages[@]} = 0 ]] && [[ ${#selectedProjects[@]} = 0 ]] ; then
-    filteredComposes=("${allComposes[@]}")
-
-  # or filter them by package or compose name
-  else
-    local compose=
-    for compose in "${allComposes[@]}" ; do
-      local composePackage="${compose/":"*/}"
-      local composeName="${compose/"$composePackage:"/}"
-            composeName="${composeName/":"*/}"
-
-      local selected=false
-
-      # packages filter
-      local selectedPackage=
-      for selectedPackage in "${selectedPackages[@]}" ; do
-        [[ "$composePackage/" =~ ^$selectedPackage//* ]] && selected=true && continue
-      done
-      [[ $selected = true ]] && filteredComposes+=("$compose") && continue
-
-      # compose names filter
-      local selectedImage=
-      for selectedImage in "${selectedProjects[@]}" ; do
-        [[ "$composeName" = "$selectedImage" ]] && selected=true && continue
-      done
-      [[ $selected = true ]] && filteredComposes+=("$compose") && continue
-
-    done
-  fi
+  readarray -t filteredComposes < <(   pdComposeList -x -p "${selectedProjects[*]}" "${selectedPackages[*]}"   )
 
   # print queue before build
   echo ""
@@ -68,8 +35,10 @@ function pdCompose() {
     local composePackage="${compose/":"*/}"
     local composeName="${compose/"$composePackage:"/}"
           composeName="${composeName/":"*/}"
-    printf " - ${C_WHITE}%s${C_RESET}\n" "$composeName"   ;
+    printf " - ${C_WHITE}%s${C_RESET}\n" "$composeName"
   done
+
+  # perform "docker compose" command for every selected compose project
   for compose in "${filteredComposes[@]}" ; do
     local composePackage="${compose/":"*/}"
     local composeName="${compose/"$composePackage:"/}"

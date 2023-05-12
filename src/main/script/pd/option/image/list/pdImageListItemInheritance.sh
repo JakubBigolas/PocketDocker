@@ -10,7 +10,7 @@ function pdImageListItemInheritance {
   local depth="$1"                    ; shift
   local allImages=("$@")
 
-  # split image line for specific data
+  # unwrap image line for specific data
   local imagePackage="$image"
   local imageName="$image"
   local imageVersion="$image"
@@ -44,6 +44,7 @@ function pdImageListItemInheritance {
     local item=
     for item in "${allImages[@]}" ; do
 
+      # unwrap every item image to specific data
       itemPackage="${item/":"*/}"
       itemName="${item/"$itemPackage:"/}"
       itemName="${itemName/":"*/}"
@@ -62,8 +63,12 @@ function pdImageListItemInheritance {
 
     # print info if image has been found
     if [[ -n "$foundItem" ]] ; then
+
       if [[ $printFormatted = true ]] ; then
+
+        # print current depth space
         printf "%$((depth * 3))s" ""
+
         local lineToPrint=""
 
         [[ $printImageName = true ]] && lineToPrint+="${C_YELLOW}FROM${C_RESET} $itemPackage${C_YELLOW}:${C_WHITE}$imageName${C_RESET}"
@@ -72,7 +77,9 @@ function pdImageListItemInheritance {
 
         echo -e "$lineToPrint"
         pdImageListItemInheritance "$imagesDir" "$foundItem" $printFormatted $printPackage $printImageName $printVersion $printPath $printInheritanceInverted $((depth + 1)) "${allImages[@]}"
+
       else
+
         local lineToPrint=""
 
         [[ $printPackage   = true ]] && lineToPrint+="$itemPackage"
@@ -86,7 +93,7 @@ function pdImageListItemInheritance {
 
       fi
 
-    # or if there is no matching image in index print inheritance only for formatted version
+    # or if there is no matching image in index print unmatched inheritance only for formatted version
     elif [[ $printFormatted = true ]] ; then
       printf "%$((depth * 3))s" ""
       echo "FROM :$fromWithVersion"

@@ -12,13 +12,13 @@ function pdImageBuildItem {
   local imageVersion=${image/"$imageName"/}
         imageVersion=${imageVersion/":"/}
 
-  # read image path from image list query
+  # read image path from image list query function
   local imagePath="$(pdImageList -p -N --image "$imageName")"
         imagePath=${imagePath/"{path:"/}
         imagePath=${imagePath/"}"/}
   [[ -z "$imageVersion" ]] && echo "WARNING: version not set, default value is 1.0" && imageVersion="1.0"
 
-  # prepare docker naming
+  # prepare docker image name
   local dockerImageName="$imageName:$imageVersion"
   local dockerLatestImageName="$imageName:latest"
 
@@ -26,7 +26,7 @@ function pdImageBuildItem {
   local logPath="$imagePath/$imageVersion.log"
   local logLatestPath="$imagePath/latest.log"
 
-  # print parametri
+  # print build parametrization
   printf "@ Image           ${C_WHITE}%s${C_RESET}\n" "$imageName"     ;
   printf "@ Version         ${C_BLUE}%s${C_RESET}\n"  "$imageVersion"  ;
   printf "@ Src             ${C_WHITE}%s${C_RESET}\n" "$imagePath"     ;
@@ -34,7 +34,10 @@ function pdImageBuildItem {
   printf "@ Latest log path ${C_WHITE}%s${C_RESET}\n" "$logLatestPath" ;
   echo -e ""
 
+  # run docker build process
+
   if [[ $paramSilent = true ]]; then
+
     docker build $imagePath/. -t $dockerImageName       &>	"$logPath" || exit 1
     docker tag $dockerImageName $dockerLatestImageName  &>>	"$logPath" || exit 1
 
@@ -42,11 +45,14 @@ function pdImageBuildItem {
     local buildTimeEcho="@ Build [$imageName:$imageVersion] finish in $buildTime"
     echo $buildTimeEcho	&>> $logPath
     cat $logPath > $logLatestPath
+
   else
+
     echo "$ docker build $imagePath/. -t $dockerImageName"
     docker build $imagePath/. -t $dockerImageName || exit 1
     echo "$ docker tag $dockerImageName $dockerLatestImageName"
     docker tag $dockerImageName $dockerLatestImageName || exit 1
+
   fi
 
   local buildTime=$(pdToolEndScript "$startScript")

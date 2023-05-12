@@ -1,10 +1,9 @@
 function pdImageListHelp {
 
-  [[ ! -z "$@" ]] && echo -e "${C_RED}Unhandled arguments: $@" && exit 1
   echo -e ""
-  echo -e "Usage: list [Arguments...] [packages...]"
+  echo -e "Print PocketDocker images info"
   echo -e ""
-  echo -e "Display docker images information for selected packages/images."
+  echo -e "Usage: list [Arguments...]"
   echo -e ""
   echo -e "Arguments:"
   pdToolHelpOptionPrint '-f'               'print selected information in user friendly format'
@@ -21,5 +20,3 @@ function pdImageListHelp {
   exit 0
 
 }
-
-

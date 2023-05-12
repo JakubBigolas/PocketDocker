@@ -11,7 +11,7 @@ function pdImageListItem {
   local previousPackage="$1"          ; shift
   local allImages=("$@")
 
-  # split image line for specific data
+  # unwrap image line for specific data
   local imagePackage=
   local imageName=
   local imageVersion=
@@ -26,25 +26,39 @@ function pdImageListItem {
   if [[ $printFormatted = true ]] ; then
 
     # print package name as directory tree
-    local depth=0
+
+    # unwrap packages to array of directory names
     local previousPackage=(${previousPackage//"/"/ }) # there is no missing "" in this line
-    local currentPackage=(${imagePackage//"/"/ }) # there is no missing "" in this line
+    local currentPackage=(${imagePackage//"/"/ })     # there is no missing "" in this line
     local previousPath=
     local currentPath=
+    local depth=0
     while [[ $depth -lt ${#currentPackage[@]} ]] ; do
+
+      # get current and previous directory name for same depth
       local previousPackageItem="${previousPackage[$depth]}"
       local currentPackageItem="${currentPackage[$depth]}"
 
+      # add it to previous and current path
       [[ -n "$previousPackageItem" ]] && previousPath+="$previousPackageItem/"
       [[ -n "$currentPackageItem" ]] && currentPath+="$currentPackageItem/"
 
-      [[ "$previousPath" != "$currentPath" ]] && printf "%$((depth * 3 + 1))s %s" "-" "$currentPackageItem" \
-       && [[ $((depth + 1)) -lt ${#currentPackage[@]} ]] && echo
+      # if the difference occurred while comparing paths
+      if [[ "$previousPath" != "$currentPath" ]] ; then
 
+        # print package with depth empty space
+        printf "%$((depth * 3 + 1))s %s" "-" "$currentPackageItem"
+
+        # if it is last package dir append end line
+        [[ $((depth + 1)) -lt ${#currentPackage[@]} ]] && echo
+
+      fi
+
+      # continue for another depth index
       depth=$((depth + 1))
+
     done
 
-    # print info with colors
     local lineToPrint=""
 
     [[ $printImageName = true ]] && lineToPrint+="${C_YELLOW}:${C_WHITE}$imageName${C_RESET}"

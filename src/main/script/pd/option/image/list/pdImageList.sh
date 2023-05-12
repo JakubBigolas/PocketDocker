@@ -1,5 +1,6 @@
 function pdImageList {
 
+  # flag set
   local printVersion=false
   local printFormatted=false
   local printPath=false
@@ -11,26 +12,29 @@ function pdImageList {
   # images directory from config.sh
   local imagesDir="$PD_DOCKER_PROJECT_DIR/images"
 
+  # --- LOAD IMAGES INDEX
+
   # find all images dockerfiles
   local dockerfiles=()
   readarray -t dockerfiles < <(find "$imagesDir" -regex .*/Dockerfile$)
 
-  # dockerfiles paths to packages
+  # convert dockerfiles paths to packages
   local packages=("${dockerfiles[@]}")
   packages=("${packages[@]//"$imagesDir/"/}")
   packages=("${packages[@]//"/Dockerfile"/}")
   packages=("${packages[@]//"\\"/"/"}")
 
-  # add images name and version info to every package
+  # add images names and version info to every package
   local allImages=()
   local package=
   for package in "${packages[@]}" ; do
-    # by default image name is package with - sign instead of / and \
+
+    # by default image name is package with "-" sign instead of / and \
     local imageName="$package"
     imageName="${imageName//"/"/-}"
     imageName="${imageName//"\\"/-}"
 
-    # try retrieve specified image name from file
+    # try retrieve specified image name from file /repository
     local repository="$imagesDir/$package/repository"
     if [[ -f "$repository" ]] ; then
       local repositoryName=
@@ -45,15 +49,19 @@ function pdImageList {
 
     # concatenate all info in one line and add to all images array
     allImages+=("$package:$imageName:$versionNumber")
+
   done
 
+  # --- HANDLE USER ARGUMENTS
 
-
-  local selectedImages=()
-  local selectedPackages=()
+  local selectedImages=()     # user selected fully-qualified image names
+  local selectedPackages=()   # user selected packages / sub-packages
 
   while [[ $# -gt 0 ]]; do
     case $1 in
+
+      # print help info
+      --help|"-?"|help) pdImageListHelp ; exit 0 ;;
 
       # flags
       -f) printFormatted=true           ; shift ;;
@@ -64,51 +72,46 @@ function pdImageList {
       -i) printInheritance=true         ; shift ;;
       -I) printInheritanceInverted=true ; shift ;;
 
-      # print help info
-      --help|"-?"|help)
-        shift
-        eval pdImageListHelp "$@"
-        exit 0
-        ;;
-
       # pick image by name
       --image)    selectedImages+=("$2")   ; shift ; shift ;;
 
       # pick all images from package
       --package)  selectedPackages+=("$2") ; shift ; shift ;;
-
-      # pick all images from package
       *)          selectedPackages+=("$1") ; shift ;;
 
     esac
   done
 
-
+  # --- APPLY USER PACKAGE/IMAGE FILTERS
 
   local filteredImages=()
 
-  # get all images if there are no filter
+  # select all images if there are no filter
   if [[ ${#selectedPackages[@]} = 0 ]] && [[ ${#selectedImages[@]} = 0 ]] ; then
     filteredImages=("${allImages[@]}")
 
   # or filter them by package or image name
   else
+
     local image=
     for image in "${allImages[@]}" ; do
+
+      # unwrap image package and name information
       local imagePackage="${image/":"*/}"
       local imageName="${image/"$imagePackage:"/}"
       imageName="${imageName/":"*/}"
 
+      # not selected by default
       local selected=false
 
-      # packages filter
+      # packages filter, add image if it`s package starts with any user selected package
       local selectedPackage=
       for selectedPackage in "${selectedPackages[@]}" ; do
         [[ "$imagePackage/" =~ ^$selectedPackage//* ]] && selected=true && continue
       done
       [[ $selected = true ]] && filteredImages+=("$image") && continue
 
-      # image names filter
+      # image names filter, add image if its whole name equals with any user selected image
       local selectedImage=
       for selectedImage in "${selectedImages[@]}" ; do
         [[ "$imageName" = "$selectedImage" ]] && selected=true && continue
@@ -116,9 +119,11 @@ function pdImageList {
       [[ $selected = true ]] && filteredImages+=("$image") && continue
 
     done
+
   fi
 
-  # for each filtered position
+  # --- PRINT EACH FILTERED IMAGE
+
   local prevItem=
   local item=
   for item in "${filteredImages[@]}" ; do

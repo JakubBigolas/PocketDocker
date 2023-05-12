@@ -6,38 +6,20 @@ function pdImageBuild {
   while [[ $# -gt 0 ]]; do
     case $1 in
 
-      --help|"-?"|help)
-        shift
-        [[ ! -z "$*" ]] && echo -e "${C_RED}Unhandled arguments: $*" && exit 1
-        echo -e ""
-        echo -e "Usage: list [parameters] [project list]"
-        echo -e ""
-        echo -e "Run docker image build process for selected images."
-        echo -e ""
-        echo -e "Arguments:"
-        pdToolHelpOptionPrint '-s'              'prevent of printing log file to standard output'
-        pdToolHelpOptionPrint '--image *'       'build image specified by name'
-        pdToolHelpOptionPrint '--package *|*'   'build all images for package (and sub packages)'
-        pdToolHelpOptionPrint '--help|help|-?'  'print this help info'
-        echo -e ""
-        exit 0
-        ;;
+      # print this help info and exit
+      --help|"-?"|help) pdImageBuildHelp ; exit 0 ;;
 
-      -s)
-        paramSilent=true
-        shift
-        ;;
+      # set flags
+      -s) paramSilent=true ; shift ;;
 
-      # pick image by name
+      # cache image and package selection
       --image|--package) selection+=("$1" "$2") ; shift ; shift ;;
-
-      # pick all images from package
       *)                 selection+=("$1")      ; shift         ;;
 
     esac
   done
 
-  # read image names using image list query
+  # read image names using image list query function
   local buildQueue=()
   readarray -t buildQueue < <(   pdImageList -v -I "${selection[@]}"   )
 

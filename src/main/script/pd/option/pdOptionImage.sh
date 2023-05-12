@@ -1,31 +1,18 @@
 function pdOptionImage {
 
-  # Default option is "Help"
-
   while [[ $# -gt 0 ]]; do
     case $1 in
-      --help|"-?"|help)
-        shift
-        pdImageHelp
-        break;
-        ;;
 
-      build)
-        shift
-        pdImageBuild "$@"
-        break;
-        ;;
+      # print this help info and exit
+      --help|"-?"|help) shift ; pdImageHelp ; exit 0 ;;
 
-      list)
-        shift
-        pdImageList "$@"
-        break;
-        ;;
+      # sub option select and break args loop
+      build) shift ; pdImageBuild "$@" ; break ;;
+      list)  shift ; pdImageList "$@"  ; break ;;
 
-      *)
-        echo "Unknown option $1"
-        exit 1
-        ;;
+      # Error unknown
+      *)     echo "Unknown option $1"  ; exit 1 ;;
+
     esac
   done
 
