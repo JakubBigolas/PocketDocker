@@ -65,7 +65,8 @@ function pdImageListItem {
     [[ $printVersion   = true ]] && lineToPrint+="${C_YELLOW}${lineToPrint:+":"}${C_BLUE}$imageVersion${C_RESET}"
     [[ $printPath      = true ]] && lineToPrint+="${C_YELLOW}${lineToPrint:+":"}${C_CYAN}{path:$imagePath}${C_RESET}"
 
-    echo -e "$lineToPrint"
+    printf "$lineToPrint"
+    echo
     [[ $printInheritance         = true ]] && pdImageListItemInheritance "$imagesDir" "$image" $printFormatted $printPackage $printImageName $printVersion $printPath false $depth "${allImages[@]}"
 
   # simple printing
@@ -79,7 +80,8 @@ function pdImageListItem {
     [[ -z "$lineToPrint" ]] && [[ $printPath = true ]] && lineToPrint+="$imagePath"
 
     [[ $printInheritanceInverted = true ]] && pdImageListItemInheritance "$imagesDir" "$image" $printFormatted $printPackage $printImageName $printVersion $printPath $printInheritanceInverted "" "${allImages[@]}"
-    echo "$lineToPrint"
+    printf "$lineToPrint"
+    echo
     [[ $printInheritance         = true ]] && pdImageListItemInheritance "$imagesDir" "$image" $printFormatted $printPackage $printImageName $printVersion $printPath $printInheritanceInverted "" "${allImages[@]}"
   fi
 
